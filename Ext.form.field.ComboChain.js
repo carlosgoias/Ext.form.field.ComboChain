@@ -34,77 +34,82 @@
  */
  
 Ext.define('Ext.form.field.ComboChain', {
-    extend: 'Ext.form.field.ComboBox',  
+    	extend: 'Ext.form.field.ComboBox',  
 	alias: 'widget.combochain',		
-    initComponent: function() {				       
+    	initComponent: function() {				       
 		if(!this.checkIsReady())		
 			this.setDisabled(true);	
 			
 		this.on({
-			select:	function(combo, record, options){			
-				if(!combo.chains)
-					return;
-				
-				var chains = combo.chains;
-				var form = combo.ownerCt.form;					
-				var uid = combo.getValue();
-				
-				Ext.Array.each(chains, function(chain) {			
-					var comboChained = form.findField(chain.name);
-					
-					if(!comboChained)
-						Ext.Error.raise('Combo chain: ' + chain.name + 'not found on the form');
-						
-					var chained = comboChained.chained;								
-					
-					Ext.Array.each(chained, function(chaind) {					
-						if(combo.name==chaind.name)					
-							chaind.value = uid;
-					});		
-					
-					if(comboChained.checkIsReady())
-						comboChained.load();
-					else
-						comboChained.clear();
-						
-				},this);
-			}			
+			afterrender: this.setChains,
+			select:	this.comboChainSelect,
 		});
 		
 		this.callParent(arguments);				
-    },
-	clear: function()
+    	},
+    	clear: function()
 	{				
 		this.clearValue();
 		this.getStore().clearData();
 		this.lastQuery = null;		
 		this.setDisabled(true);
 	},
+	setChains: function(){
+		var me = this;				
+		me.comboChainSelect(me);
+	},
 	checkIsReady: function()
 	{
 		me = this;		
-		if(!me.chained)		
-			return true;
-			
+		if(!me.chained)			
+			return true;		
 		
 		var result = true;
 		var chained = me.chained;
-		Ext.Array.each(chained, function(chain) {				
+		
+		Ext.Array.each(chained, function(chain) {			
 			if((chain.value === '' || chain.value === undefined) && (chain.required))										
 				result = false;				
-		});
+		});	
+		
 		return result;
 	},
 	load: function()
 	{		
-		this.clear();
-		this.setDisabled(false);
+		var store = this.getStore();	
+		var me = this;
+		me.setDisabled(false);										
+		Ext.Array.each(me.chained, function(chained) {				 
+			store.proxy.extraParams[chained.key] = chained.value;
+		},me);				
+		store.load();				
+	},
+	comboChainSelect: function(combo, record, options){			
+		if(!combo.chains)
+			return;
 		
-		Ext.Array.each(this.chained, function(chained) {				 
-			this.getStore().proxy.extraParams[chained.key] = chained.value;
+		var chains = combo.chains;				
+		var painel = combo.up('form');						
+		var form = painel.getForm();
+		var uid = combo.getValue();
+		
+		Ext.Array.each(chains, function(chain) {			
+			var comboChained = form.findField(chain.name);
+			
+			if(comboChained){			
+				var chained = comboChained.chained;								
+				
+				Ext.Array.each(chained, function(chaind) {					
+					if(combo.name==chaind.name)					
+						chaind.value = uid;
+				});		
+				
+				if(comboChained.checkIsReady())
+					comboChained.load();
+				else
+					comboChained.clear();
+			}	
 		},this);
-		var store =this.getStore();		
-		store.load();			
 	},	
 	chained: null,
 	chains: null,
