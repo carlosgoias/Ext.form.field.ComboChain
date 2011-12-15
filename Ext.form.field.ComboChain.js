@@ -92,7 +92,8 @@ Ext.define('Ext.form.field.ComboChain', {
 		var painel = combo.up('form');						
 		var form = painel.getForm();
 		var uid = combo.getValue();
-		
+		if(!uid)
+			return;	
 		Ext.Array.each(chains, function(chain) {			
 			var comboChained = form.findField(chain.name);
 			
